@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            /* Применяем новый шрифт Roboto */
             font-family: 'Roboto', sans-serif;
             background-image: url('back.jpg');
             background-size: cover;
@@ -22,33 +21,28 @@
             min-height: 100vh;
             margin: 0;
             text-align: center;
-            padding-bottom: 20px; /* Отступ внизу для подписи */
         }
 
         h1 {
             color: #003366;
             margin-bottom: 20px;
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            padding: 0 10px;
         }
 
         button {
-            /* Общие стили для кнопки и label */
             padding: 12px 25px;
             font-size: 18px;
             font-weight: 400;
-            border: none;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: block;
-            min-width: 250px;
-        }
-
-        button {
             background-color: #003366;
             color: white;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
+            margin-bottom: 10px;
+            min-width: 280px;
             transition: 0.3s;
         }
 
@@ -56,62 +50,57 @@
             background-color: #0050a0;
         }
 
-        /* Заставляем контейнер для лейбла выглядеть так же, как кнопка */
         #label-container {
             padding: 12px 25px;
             font-size: 18px;
             font-weight: 700;
             border-radius: 8px;
-            margin-bottom: 15px;
-            margin-top: 15px;
+            margin-top: 10px;
+            margin-bottom: 20px;
             display: inline-block;
             color: #003366;
             background: rgba(255, 255, 255, 0.7);
-            min-width: 250px;
-            box-sizing: border-box; /* Чтобы padding не увеличивал ширину */
+            min-width: 280px;
+            box-sizing: border-box;
         }
 
         #webcam-container {
-            margin-bottom: 15px;
-            margin-top: 15px;
             border: 5px solid white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             display: flex;
             justify-content: center;
-            width: 310px; /* Немного шире чем 300x300 canvas */
+            background: #000;
+            width: 310px;
             height: 310px;
         }
 
-        /* Стили для подписи внизу */
         .footer-info {
-            margin-top: auto; /* Прижимает к низу */
-            margin-bottom: 10px;
+            margin-top: auto;
+            margin-bottom: 20px;
             display: flex;
-            align-items: center; /* Выравнивает эмблему и текст по вертикали */
-            gap: 15px; /* Отступ между эмблемой и текстом */
+            align-items: center;
+            gap: 15px;
             color: #003366;
             background: rgba(255, 255, 255, 0.6);
             padding: 15px;
             border-radius: 15px;
-            max-width: 90%; /* Чтобы не выходило за края на мобильных */
-            box-sizing: border-box;
-            width: auto;
+            max-width: 90%;
+            text-align: left;
         }
 
         .footer-info img {
-            height: 60px; /* Высота эмблемы */
+            height: 55px;
             width: auto;
-            flex-shrink: 0; /* Не дает эмблеме сжиматься */
+            flex-shrink: 0;
         }
 
         .footer-info p {
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.4;
-            text-align: left; /* Выравнивает текст в подписи по левому краю */
-            margin: 0; /* Убираем стандартные отступы <p> */
-            font-weight: 300; /* Более тонкий шрифт для текста */
+            margin: 0;
+            font-weight: 400;
         }
     </style>
 </head>
@@ -123,6 +112,7 @@
     
     <div id="webcam-container"></div>
     <div id="label-container">Включи камеру</div>
+
     <div class="footer-info">
         <img src="emblem.png" alt="БГУТ">
         <p>© 2026, Научно-исследовательская работа студентов гр. НТ-241, БГУТ</p>
@@ -131,7 +121,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
-        // Ваша ссылка на модель
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
 
         let model, webcam, labelContainer, maxPredictions;
@@ -142,10 +131,12 @@
 
             model = await tmImage.load(modelURL, metadataURL);
             maxPredictions = model.getTotalClasses();
-
-            const flip = true; 
+            // flip = false переключает на заднюю камеру (не зеркальную)
+            const flip = false; 
             webcam = new tmImage.Webcam(300, 300, flip); 
-            await webcam.setup(); 
+            
+            // Запрашиваем именно заднюю камеру ('facingMode': 'environment')
+            await webcam.setup({ facingMode: "environment" }); 
             await webcam.play();
             window.requestAnimationFrame(loop);
 
@@ -161,7 +152,6 @@
 
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
-            
             let bestPrediction = "";
             let highestProb = 0;
 
@@ -171,11 +161,11 @@
                     bestPrediction = prediction[i].className;
                 }
             }
-            // Обновляем текст label-container
             labelContainer.innerHTML = bestPrediction;
         }
     </script>
 </body>
 </html>
+
 
 
