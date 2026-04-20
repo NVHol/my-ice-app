@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мониторинг Обледенения</title>
+    <style>
+        /* Здесь настраивается внешний вид (дизайн) */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); /* Красивый синий градиент */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1 { margin-bottom: 10px; font-size: 1.5rem; }
+        #webcam-container {
+            margin: 20px;
+            border: 5px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            overflow: hidden;
+            background: black;
+            width: 300px;
+            height: 300px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            background: #00d2ff;
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+        button:hover { background: #0095ff; transform: scale(1.05); }
+        #label-container {
+            margin-top: 20px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            min-width: 250px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Система анализа испарителя</h1>
+    <button type="button" onclick="init()">Включить камеру</button>
+    
+    <div id="webcam-container"></div>
+    <div id="label-container">Нажмите кнопку для начала</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        // ВСТАВЬТЕ СВОЮ ССЫЛКУ НИЖЕ ВМЕСТО МОЕЙ
+        const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            document.getElementById("label-container").innerHTML = "Загрузка модели...";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // Настройка камеры для телефона
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip); 
+            await webcam.setup({ facingMode: "environment" }); // Используем заднюю камеру
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+        }
+
+        async function loop() {
+            webcam.update(); 
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            // Ищем самый вероятный результат
+            let highestProb = 0;
+            let bestClassName = "";
+
+            for (let i = 0; i < maxPredictions; i++) {
+                if (prediction[i].probability > highestProb) {
+                    highestProb = prediction[i].probability;
+                    bestClassName = prediction[i].className;
+                }
+            }
+          // Выводим только самый вероятный класс, если уверенность выше 60%
+            if (highestProb > 0.60) {
+                labelContainer.innerHTML = bestClassName + " (" + (highestProb * 100).toFixed(0) + "%)";
+                
+                // Меняем цвет фона в зависимости от результата
+                if (bestClassName.includes("Оптимальный")) labelContainer.style.color = "#47ff78";
+                else if (bestClassName.includes("Снижение")) labelContainer.style.color = "#ffeb3b";
+                else if (bestClassName.includes("Критическое")) labelContainer.style.color = "#ff5252";
+            } else {
+                labelContainer.innerHTML = "Анализирую...";
+                labelContainer.style.color = "white";
+            }
+        }
+    </script>
+</body>
+</html>
