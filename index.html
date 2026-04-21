@@ -50,12 +50,14 @@
             background-color: #0050a0;
         }
 
+        /* Кнопка ошибки */
         #error-btn {
             background-color: #d9534f;
             display: none;
             margin-top: 10px;
         }
 
+        /* Панель обратной связи */
         #feedback-panel {
             display: none;
             background: rgba(255, 255, 255, 0.95);
@@ -131,7 +133,7 @@
 
     <h1>Мониторинг намораживания инея</h1>
     
-    <button type="button" id="main-start-btn" onclick="init()">Включить камеру</button>
+    <button type="button" onclick="init()">Включить камеру</button>
     
     <div id="webcam-container"></div>
     <div id="label-container">Включи камеру</div>
@@ -156,8 +158,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
-        
-        // --- ДАННЫЕ TELEGRAM ---
         const TG_TOKEN = "8620406422:AAERiA21lVU5VyKHi4MeBk7SPIxNyHftBQw";
         const TG_CHAT_ID = "-5132674165";
 
@@ -169,6 +169,7 @@
 
             model = await tmImage.load(modelURL, metadataURL);
             maxPredictions = model.getTotalClasses();
+            
             const flip = false; 
             webcam = new tmImage.Webcam(300, 300, flip); 
             
@@ -179,7 +180,7 @@
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             labelContainer = document.getElementById("label-container");
 
-            document.getElementById("main-start-btn").style.display = "none";
+            // Просто добавляем появление кнопки, не трогая основной код
             document.getElementById("error-btn").style.display = "inline-block";
         }
 
@@ -203,6 +204,7 @@
             labelContainer.innerHTML = bestPrediction;
         }
 
+        // Функции управления интерфейсом
         function showFeedback() {
             document.getElementById("feedback-panel").style.display = "block";
             document.getElementById("error-btn").style.display = "none";
@@ -213,31 +215,31 @@
             document.getElementById("error-btn").style.display = "inline-block";
         }
 
-        // --- ФУНКЦИЯ ОТПРАВКИ ФОТО ---
+        // Отправка в Telegram
         async function sendFeedback(correctClass) {
-            // 1. Делаем снимок (Blob) из текущего кадра канваса
-            webcam.canvas.toBlob(async (blob) => {
+            // Берем картинку прямо из видео-элемента через Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = webcam.canvas.width;
+            canvas.height = webcam.canvas.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(webcam.canvas, 0, 0);
+
+            canvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append("chat_id", TG_CHAT_ID);
                 formData.append("photo", blob, "feedback.jpg");
                 formData.append("caption", "Корректный класс: " + correctClass);
-
                 try {
-                    const response = await fetch(https://api.telegram.org/bot${TG_TOKEN}/sendPhoto, {
+                    await fetch("https://api.telegram.org/bot" + TG_TOKEN + "/sendPhoto", {
                         method: "POST",
                         body: formData
                     });
-            if (response.ok) {
-                        alert("Спасибо! Данные отправлены для дообучения модели.");
-                    } else {
-                        alert("Ошибка отправки в Telegram.");
-                    }
+                    alert("Фото отправлено в группу!");
                 } catch (e) {
-                    alert("Проблема с сетью или доступом к API.");
+                    alert("Ошибка сети");
                 }
-                
-                hideFeedback(); // Закрываем панель после отправки
-            }, "image/jpeg", 0.7); // 0.7 - качество сжатия, чтобы фото улетало быстрее
+                hideFeedback();
+            }, "image/jpeg", 0.7);
         }
     </script>
 </body>
