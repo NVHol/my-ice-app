@@ -56,7 +56,6 @@
             margin-top: 10px;
         }
 
-        /* --- НОВЫЕ СТИЛИ ДЛЯ ПАНЕЛИ ВЫБОРА --- */
         #feedback-panel {
             display: none;
             background: rgba(255, 255, 255, 0.95);
@@ -73,7 +72,6 @@
             min-width: 260px;
             margin: 5px 0;
         }
-        /* ------------------------------------ */
 
         #label-container {
             padding: 12px 25px;
@@ -141,10 +139,10 @@
     <button type="button" id="error-btn" onclick="showFeedback()">Модель ошиблась? Помоги ей!</button>
     <div id="feedback-panel">
         <p style="color: #003366; font-weight: bold; margin-bottom: 10px;">Какой класс верный?</p>
-        <button class="class-btn" onclick="alert('Вы выбрали: Оптимальный режим')">Оптимальный режим</button>
-        <button class="class-btn" onclick="alert('Вы выбрали: Снижение эффективности')">Снижение эффективности</button>
-        <button class="class-btn" onclick="alert('Вы выбрали: Критическое обледенение')">Критическое обледенение</button>
-        <button class="class-btn" onclick="alert('Вы выбрали: Это не испаритель')">Это не испаритель</button>
+        <button class="class-btn" onclick="sendFeedback('Оптимальный режим')">Оптимальный режим</button>
+        <button class="class-btn" onclick="sendFeedback('Снижение эффективности')">Снижение эффективности</button>
+        <button class="class-btn" onclick="sendFeedback('Критическое обледенение')">Критическое обледенение</button>
+        <button class="class-btn" onclick="sendFeedback('Это не испаритель')">Это не испаритель</button>
         <hr>
         <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px;">Отмена</button>
     </div>
@@ -158,6 +156,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
+        
+        // --- ДАННЫЕ TELEGRAM ---
+        const TG_TOKEN = "8620406422:AAERiA21lVU5VyKHi4MeBk7SPIxNyHftBQw";
+        const TG_CHAT_ID = "-5132674165";
 
         let model, webcam, labelContainer, maxPredictions;
 
@@ -201,7 +203,6 @@
             labelContainer.innerHTML = bestPrediction;
         }
 
-        /* --- НОВЫЕ ФУНКЦИИ УПРАВЛЕНИЯ ПАНЕЛЬЮ --- */
         function showFeedback() {
             document.getElementById("feedback-panel").style.display = "block";
             document.getElementById("error-btn").style.display = "none";
@@ -211,10 +212,37 @@
             document.getElementById("feedback-panel").style.display = "none";
             document.getElementById("error-btn").style.display = "inline-block";
         }
-        /* ---------------------------------------- */
+
+        // --- ФУНКЦИЯ ОТПРАВКИ ФОТО ---
+        async function sendFeedback(correctClass) {
+            // 1. Делаем снимок (Blob) из текущего кадра канваса
+            webcam.canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append("chat_id", TG_CHAT_ID);
+                formData.append("photo", blob, "feedback.jpg");
+                formData.append("caption", "Корректный класс: " + correctClass);
+
+                try {
+                    const response = await fetch(https://api.telegram.org/bot${TG_TOKEN}/sendPhoto, {
+                        method: "POST",
+                        body: formData
+                    });
+            if (response.ok) {
+                        alert("Спасибо! Данные отправлены для дообучения модели.");
+                    } else {
+                        alert("Ошибка отправки в Telegram.");
+                    }
+                } catch (e) {
+                    alert("Проблема с сетью или доступом к API.");
+                }
+                
+                hideFeedback(); // Закрываем панель после отправки
+            }, "image/jpeg", 0.7); // 0.7 - качество сжатия, чтобы фото улетало быстрее
+        }
     </script>
 </body>
 </html>
+
 
 
 
