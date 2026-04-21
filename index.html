@@ -76,8 +76,27 @@
             height: 310px;
         }
 
+        #feedback-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            width: 300px;
+            z-index: 100;
+        }
+
+        .class-btn {
+            background-color: #5bc0de;
+            font-size: 14px;
+            min-width: 240px;
+            margin: 5px 0;
+            padding: 10px;
+        }
+
         .footer-info {
-            margin-top: auto;
+            margin-top: 20px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -108,10 +127,18 @@
 
     <h1>Мониторинг намораживания инея</h1>
     
-    <button type="button" onclick="init()">Включить камеру</button>
+    <button type="button" id="start-btn" onclick="init()">Включить камеру</button>
     
     <div id="webcam-container"></div>
     <div id="label-container">Включи камеру</div>
+
+    <button id="error-btn" style="display:none; background-color: #d9534f;" onclick="showFeedback()">Модель ошиблась? Помоги ей!</button>
+
+    <div id="feedback-panel">
+        <p style="color: #003366; font-weight: bold; margin: 0 0 10px 0;">Какой класс верный?</p>
+        <div id="class-buttons"></div>
+        <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px; margin-top: 10px;">Отмена</button>
+    </div>
 
     <div class="footer-info">
         <img src="emblem.png" alt="БГУТ">
@@ -122,25 +149,38 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
+        const TG_TOKEN = "8620406422:AAERiA21lVU5VyKHi4MeBk7SPIxNyHftBQw";
+        const TG_CHAT_ID = "-5132674165";
 
         let model, webcam, labelContainer, maxPredictions;
 
         async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-            // flip = false переключает на заднюю камеру (не зеркальную)
-            const flip = false; 
-            webcam = new tmImage.Webcam(300, 300, flip); 
-            
-            // Запрашиваем именно заднюю камеру ('facingMode': 'environment')
-            await webcam.setup({ facingMode: "environment" }); 
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+            try {
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
 
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+                
+                const flip = false; 
+                webcam = new tmImage.Webcam(300, 300, flip); 
+                
+                await webcam.setup({ facingMode: "environment" }); 
+                await webcam.play();
+                window.requestAnimationFrame(loop);
+
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+                labelContainer = document.getElementById("label-container");
+                
+                // Скрываем кнопку запуска и показываем кнопку ошибки
+                document.getElementById("start-btn").style.display = "none";
+                document.getElementById("error-btn").style.display = "inline-block";
+                
+                createClassButtons();
+            } catch (err) {
+                console.error(err);
+                alert("Ошибка запуска камеры: " + err);
+            }
         }
 
         async function loop() {
@@ -162,10 +202,54 @@
             }
             labelContainer.innerHTML = bestPrediction;
         }
+
+        function createClassButtons() {
+            const container = document.getElementById("class-buttons");
+            container.innerHTML = "";
+            const classes = model.getClassLabels();
+            
+            classes.forEach(className => {
+                const btn = document.createElement("button");
+                btn.innerText = className;
+                btn.className = "class-btn";
+                // Используем стрелочную функцию для передачи правильного класса
+                btn.onclick = () => sendFeedback(className);
+                container.appendChild(btn);
+            });
+        }
+
+        function showFeedback() {
+            document.getElementById("feedback-panel").style.display = "block";
+            document.getElementById("error-btn").style.display = "none";
+        }
+
+        function hideFeedback() {
+            document.getElementById("feedback-panel").style.display = "none";
+            document.getElementById("error-btn").style.display = "inline-block";
+        }
+        async function sendFeedback(correctClass) {
+            // Превращаем текущий кадр в картинку
+            webcam.canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append("chat_id", TG_CHAT_ID);
+                formData.append("photo", blob, "feedback.jpg");
+                formData.append("caption", "Класс: " + correctClass);
+
+                try {
+                    await fetch(https://api.telegram.org/bot${TG_TOKEN}/sendPhoto, {
+                        method: "POST",
+                        body: formData
+                    });
+                    alert("Отправлено!");
+                } catch (e) {
+                    alert("Ошибка отправки.");
+                }
+                hideFeedback();
+            }, "image/jpeg");
+        }
     </script>
 </body>
 </html>
-
 
 
 
