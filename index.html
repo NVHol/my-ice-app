@@ -50,10 +50,25 @@
             background-color: #0050a0;
         }
 
-        /* Только необходимые стили для новых кнопок */
         #error-btn { background-color: #d9534f; display: none; }
-        #feedback-panel { display: none; background: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 10px; margin-top: 10px; }
-        .class-btn { background-color: #5bc0de; font-size: 14px; margin: 5px; min-width: 200px; }
+
+        /* Панель с кнопками в столбик */
+        #feedback-panel { 
+            display: none; 
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 15px; 
+            border-radius: 15px; 
+            margin-top: 10px;
+            flex-direction: column; /* Кнопки в столбик */
+            align-items: center;
+        }
+
+        .class-btn { 
+            background-color: #5bc0de; 
+            font-size: 14px; 
+            margin: 5px 0; 
+            min-width: 260px; 
+        }
 
         #label-container {
             padding: 12px 25px;
@@ -111,12 +126,12 @@
     <button type="button" id="error-btn" onclick="showFeedback()">Модель ошиблась? Помоги ей!</button>
 
     <div id="feedback-panel">
+        <p style="color: #003366; font-weight: bold; margin-top: 0;">Какой класс верный?</p>
         <button class="class-btn" onclick="sendFeedback('Оптимальный режим')">Оптимальный режим</button>
         <button class="class-btn" onclick="sendFeedback('Снижение эффективности')">Снижение эффективности</button>
         <button class="class-btn" onclick="sendFeedback('Критическое обледенение')">Критическое обледенение</button>
         <button class="class-btn" onclick="sendFeedback('Это не испаритель')">Это не испаритель</button>
-        <br>
-        <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px;">Отмена</button>
+        <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px; margin-top: 10px;">Отмена</button>
     </div>
 
     <div class="footer-info">
@@ -127,7 +142,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
-        // Настройки
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
         const TG_TOKEN = "8620406422:AAERiA21lVU5VyKHi4MeBk7SPIxNyHftBQw";
         const TG_CHAT_ID = "-5132674165";
@@ -150,7 +164,6 @@
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             labelContainer = document.getElementById("label-container");
 
-            // Единственное добавление: показываем кнопку ошибки
             document.getElementById("error-btn").style.display = "inline-block";
         }
 
@@ -174,9 +187,8 @@
             labelContainer.innerHTML = bestPrediction;
         }
 
-        // Простые функции переключения видимости
         function showFeedback() {
-            document.getElementById("feedback-panel").style.display = "block";
+            document.getElementById("feedback-panel").style.display = "flex"; /* Включаем flex для столбика */
             document.getElementById("error-btn").style.display = "none";
         }
 
@@ -185,10 +197,25 @@
             document.getElementById("error-btn").style.display = "inline-block";
         }
 
-        // Временная функция-заглушка для проверки
-        function sendFeedback(className) {
-            alert("Вы выбрали: " + className + ". Сейчас камера работает?");
-            hideFeedback();
+        async function sendFeedback(className) {
+            // Берем кадр из холста библиотеки Teachable Machine
+            webcam.canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append("chat_id", TG_CHAT_ID);
+                formData.append("photo", blob, "feedback.jpg");
+                formData.append("caption", "Корректный класс: " + className);
+
+                try {
+                    await fetch("https://api.telegram.org/bot" + TG_TOKEN + "/sendPhoto", {
+                        method: "POST",
+                        body: formData
+                    });
+                    alert("Фото успешно отправлено!");
+                } catch (e) {
+                    alert("Ошибка отправки. Проверьте интернет.");
+                }
+                hideFeedback();
+            }, "image/jpeg", 0.7);
         }
     </script>
 </body>
