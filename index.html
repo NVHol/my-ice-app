@@ -76,8 +76,26 @@
             height: 310px;
         }
 
+        /* Стиль для панели обратной связи */
+        #feedback-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            width: 300px;
+        }
+
+        .class-btn {
+            background-color: #5bc0de;
+            font-size: 14px;
+            min-width: 200px;
+            margin: 5px 0;
+        }
+
         .footer-info {
-            margin-top: auto;
+            margin-top: 20px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -113,6 +131,13 @@
     <div id="webcam-container"></div>
     <div id="label-container">Включи камеру</div>
 
+    <button id="error-btn" style="display:none; background-color: #d9534f;" onclick="showFeedback()">Модель ошиблась? Помоги ей!</button>
+
+    <div id="feedback-panel">
+        <p style="color: #003366; font-weight: bold; margin-top: 0;">Какой класс верный?</p>
+        <div id="class-buttons"></div>
+        <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px;">Отмена</button>
+    </div>
     <div class="footer-info">
         <img src="emblem.png" alt="БГУТ">
         <p>© 2026, Научно-исследовательская работа студентов гр. НТ-241, БГУТ</p>
@@ -122,6 +147,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
+        
+        // Настройки Telegram
+        const TG_TOKEN = "8620406422:AAERiA21lVU5VyKHi4MeBk7SPIxNyHftBQw";
+        const TG_CHAT_ID = "-5132674165";
 
         let model, webcam, labelContainer, maxPredictions;
 
@@ -131,17 +160,22 @@
 
             model = await tmImage.load(modelURL, metadataURL);
             maxPredictions = model.getTotalClasses();
-            // flip = false переключает на заднюю камеру (не зеркальную)
+            
             const flip = false; 
             webcam = new tmImage.Webcam(300, 300, flip); 
             
-            // Запрашиваем именно заднюю камеру ('facingMode': 'environment')
             await webcam.setup({ facingMode: "environment" }); 
             await webcam.play();
             window.requestAnimationFrame(loop);
 
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             labelContainer = document.getElementById("label-container");
+
+            // Показываем кнопку ошибки после запуска камеры
+            document.getElementById("error-btn").style.display = "inline-block";
+            
+            // Создаем кнопки классов для обратной связи автоматически
+            createClassButtons();
         }
 
         async function loop() {
@@ -163,9 +197,73 @@
             }
             labelContainer.innerHTML = bestPrediction;
         }
+
+        // --- ФУНКЦИИ ОБРАТНОЙ СВЯЗИ ---
+
+        function createClassButtons() {
+            const container = document.getElementById("class-buttons");
+            container.innerHTML = ""; // Очистка
+            
+            // Получаем названия классов из метаданных модели
+            const classes = model.getClassLabels();
+            
+            classes.forEach(className => {
+                const btn = document.createElement("button");
+                btn.innerText = className;
+                btn.className = "class-btn";
+                btn.onclick = () => sendFeedback(className);
+                container.appendChild(btn);
+            });
+        }
+
+        function showFeedback() {
+            document.getElementById("feedback-panel").style.display = "block";
+            document.getElementById("error-btn").style.display = "none";
+        }
+
+        function hideFeedback() {
+            document.getElementById("feedback-panel").style.display = "none";
+            document.getElementById("error-btn").style.display = "inline-block";
+        }
+
+        async function sendFeedback(correctClass) {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Отправка...";
+            btn.disabled = true;
+
+            // 1. Делаем снимок с канваса
+            const canvas = webcam.canvas;
+            
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append("chat_id", TG_CHAT_ID);
+                formData.append("photo", blob, "error.jpg");
+                formData.append("caption", ❌ Ошибка нейросети!\nПравильный класс: ${correctClass}\nДата: ${new Date().toLocaleString()});
+            try {
+                    const response = await fetch(https://api.telegram.org/bot${TG_TOKEN}/sendPhoto, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        alert("Спасибо! Фото отправлено в чат для дообучения.");
+                    } else {
+                        alert("Ошибка при отправке в Telegram.");
+                    }
+                } catch (e) {
+                    alert("Не удалось связаться с Telegram.");
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    hideFeedback();
+                }
+            }, "image/jpeg", 0.8);
+        }
     </script>
 </body>
 </html>
+
 
 
 
