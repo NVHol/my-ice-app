@@ -50,12 +50,30 @@
             background-color: #0050a0;
         }
 
-        /* Стиль для новой красной кнопки */
         #error-btn {
             background-color: #d9534f;
-            display: none; /* Скрыта изначально */
+            display: none;
             margin-top: 10px;
         }
+
+        /* --- НОВЫЕ СТИЛИ ДЛЯ ПАНЕЛИ ВЫБОРА --- */
+        #feedback-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            width: 300px;
+        }
+
+        .class-btn {
+            background-color: #5bc0de;
+            font-size: 14px;
+            min-width: 260px;
+            margin: 5px 0;
+        }
+        /* ------------------------------------ */
 
         #label-container {
             padding: 12px 25px;
@@ -120,7 +138,16 @@
     <div id="webcam-container"></div>
     <div id="label-container">Включи камеру</div>
 
-    <button type="button" id="error-btn" onclick="alert('Кнопка работает!')">Модель ошиблась? Помоги ей!</button>
+    <button type="button" id="error-btn" onclick="showFeedback()">Модель ошиблась? Помоги ей!</button>
+    <div id="feedback-panel">
+        <p style="color: #003366; font-weight: bold; margin-bottom: 10px;">Какой класс верный?</p>
+        <button class="class-btn" onclick="alert('Вы выбрали: Оптимальный режим')">Оптимальный режим</button>
+        <button class="class-btn" onclick="alert('Вы выбрали: Снижение эффективности')">Снижение эффективности</button>
+        <button class="class-btn" onclick="alert('Вы выбрали: Критическое обледенение')">Критическое обледенение</button>
+        <button class="class-btn" onclick="alert('Вы выбрали: Это не испаритель')">Это не испаритель</button>
+        <hr>
+        <button onclick="hideFeedback()" style="background-color: #888; font-size: 14px; min-width: 100px;">Отмена</button>
+    </div>
 
     <div class="footer-info">
         <img src="emblem.png" alt="БГУТ">
@@ -133,6 +160,7 @@
         const URL = "https://teachablemachine.withgoogle.com/models/t6ijRGo9j/";
 
         let model, webcam, labelContainer, maxPredictions;
+
         async function init() {
             const modelURL = URL + "model.json";
             const metadataURL = URL + "metadata.json";
@@ -149,11 +177,8 @@
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             labelContainer = document.getElementById("label-container");
 
-            // --- НОВЫЕ СТРОЧКИ ТУТ ---
-            document.getElementById("main-start-btn").style.display = "none"; // Прячем кнопку старта
-            document.getElementById("error-btn").style.display = "inline-block"; // Показываем кнопку ошибки
-            labelContainer.innerHTML = "Камера запущена. Ожидание данных..."; 
-            // -------------------------
+            document.getElementById("main-start-btn").style.display = "none";
+            document.getElementById("error-btn").style.display = "inline-block";
         }
 
         async function loop() {
@@ -175,7 +200,22 @@
             }
             labelContainer.innerHTML = bestPrediction;
         }
+
+        /* --- НОВЫЕ ФУНКЦИИ УПРАВЛЕНИЯ ПАНЕЛЬЮ --- */
+        function showFeedback() {
+            document.getElementById("feedback-panel").style.display = "block";
+            document.getElementById("error-btn").style.display = "none";
+        }
+
+        function hideFeedback() {
+            document.getElementById("feedback-panel").style.display = "none";
+            document.getElementById("error-btn").style.display = "inline-block";
+        }
+        /* ---------------------------------------- */
     </script>
 </body>
 </html>
+
+
+
 
